@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "larissa04alves.omadoro",
+  "name": "Omadoro",
+  "version": "1.0.0",
+  "author": "larissa04alves",
+  "license": "MIT",
+  "description": "Omadoro: the Omarchy pomodoro. Work/break timer with a progress ring in the bar.",
+  "kinds": ["service", "bar-widget"],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Omadoro",
+    "description": "Work/break timer with progress ring",
+    "category": "Time",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "work": 25,
+      "short": 5,
+      "long": 15,
+      "longEvery": 4,
+      "autoStartNext": false,
+      "sound": ""
+    }
+  }
+}
