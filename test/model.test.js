@@ -62,9 +62,9 @@ function tickAt(timer, c, now) { return M.step(timer, { kind: "tick" }, c, now) 
 
 test("remaining_running_vs_paused", () => {
   const c = cfg()
-  let s = M.initialTimer(c) // 25min, pausado
+  let s = M.initialTimer(c) // 25min, paused
   assert.strictEqual(M.remainingMs(s, 1000 * S), 25 * 60 * S)
-  s = toggleAt(s, c, 1000 * S) // inicia em now=1000 -> end=1000+1500
+  s = toggleAt(s, c, 1000 * S) // starts at now=1000 -> end=1000+1500
   assert.strictEqual(s.clock.endsAt, (1000 + 1500) * S)
   assert.strictEqual(M.remainingMs(s, 1000 * S), 1500 * S)
   assert.strictEqual(M.remainingMs(s, 1100 * S), 1400 * S)
@@ -80,8 +80,8 @@ test("remaining_clamps_at_zero", () => {
 test("toggle_preserves_remaining_when_pausing", () => {
   const c = cfg()
   let s = M.initialTimer(c)
-  s = toggleAt(s, c, 0) // rodando, end=1500
-  s = toggleAt(s, c, 100 * S) // pausa em now=100 -> remaining=1400
+  s = toggleAt(s, c, 0) // running, end=1500
+  s = toggleAt(s, c, 100 * S) // pauses at now=100 -> remaining=1400
   assert.strictEqual(s.clock.state, "paused")
   assert.strictEqual(s.clock.remainingMs, 1400 * S)
 })
@@ -97,7 +97,7 @@ test("restart_resets_current_phase", () => {
 test("tick_transitions_once_at_zero", () => {
   const c = cfg()
   let s = M.initialTimer(c)
-  s = toggleAt(s, c, 0) // foco rodando, end=1500
+  s = toggleAt(s, c, 0) // focus running, end=1500
 
   let r = tickAt(s, c, 1499 * S)
   assert.strictEqual(r.effects.some(e => e.kind === "notify"), false)
@@ -108,7 +108,7 @@ test("tick_transitions_once_at_zero", () => {
   s = r.timer
   assert.strictEqual(s.phase, "short_break")
   assert.strictEqual(s.completedWork, 1)
-  // auto_start_next=false por padrão -> pausado, não re-dispara
+  // auto_start_next=false by default -> paused, does not fire again
   assert.strictEqual(s.clock.state, "paused")
 
   r = tickAt(s, c, 2000 * S)
@@ -117,13 +117,13 @@ test("tick_transitions_once_at_zero", () => {
 })
 
 test("full_cycle_hits_long_break", () => {
-  const c = cfg({ autoStartNext: true }) // encadeia as fases sozinho
+  const c = cfg({ autoStartNext: true }) // chains phases automatically
   let s = M.initialTimer(c)
   s = toggleAt(s, c, 0)
   let longSeen = false
   for (let i = 0; i < 12; i++) {
-    const now = s.clock.endsAt // salta para o fim da fase corrente…
-    s = Object.assign({}, s, { seenAt: now - S }) // …simulando que o heartbeat ticou até lá
+    const now = s.clock.endsAt // jumps to the end of the current phase…
+    s = Object.assign({}, s, { seenAt: now - S }) // …simulating heartbeats up to that point
     const r = tickAt(s, c, now)
     s = r.timer
     if (r.effects.some(e => e.kind === "notify") && s.phase === "long_break") {
@@ -142,7 +142,7 @@ test("skip_advances_and_runs", () => {
   assert.strictEqual(s.phase, "short_break")
   assert.strictEqual(s.clock.state, "running")
   assert.strictEqual(M.remainingMs(s, 0), 5 * 60 * S)
-  // foco pulado não conta para a cadência da pausa longa
+  // skipped focus does not count toward the long-break cadence
   assert.strictEqual(s.completedWork, 0)
 })
 
@@ -150,7 +150,7 @@ test("skipped_work_never_earns_long_break", () => {
   const c = cfg() // long_every = 4
   let s = M.initialTimer(c)
   for (let i = 0; i < 10; i++) {
-    s = skipAt(s, c, 1000 * S) // pula tudo, nunca completa um foco
+    s = skipAt(s, c, 1000 * S) // skips everything, never completes a focus
     assert.notStrictEqual(s.phase, "long_break")
   }
   assert.strictEqual(s.completedWork, 0)
@@ -159,13 +159,13 @@ test("skipped_work_never_earns_long_break", () => {
 test("gap_resets_phase_paused_without_transition", () => {
   const c = cfg()
   let s = M.initialTimer(c)
-  s = toggleAt(s, c, 1000 * S) // rodando, end=2500
+  s = toggleAt(s, c, 1000 * S) // running, end=2500
 
   let r = tickAt(s, c, 1030 * S)
   assert.ok(r.effects.length > 0) // heartbeat: seenAt=1030
   s = r.timer
 
-  // "religou o PC" 10h depois: fase cheia, pausada, sem notificação
+  // "turned the PC back on" 10h later: full phase, paused, no notification
   r = tickAt(s, c, (1030 + 36000) * S)
   assert.strictEqual(r.effects.some(e => e.kind === "notify"), false)
   assert.ok(r.effects.length > 0)
@@ -182,7 +182,7 @@ test("short_gap_does_not_reset", () => {
   assert.ok(r.effects.length > 0) // seenAt=1030
   s = r.timer
 
-  r = tickAt(s, c, 1090 * S) // 60s de buraco: dentro da tolerância
+  r = tickAt(s, c, 1090 * S) // 60s gap: within tolerance
   assert.strictEqual(r.effects.some(e => e.kind === "notify"), false)
   assert.strictEqual(r.timer.clock.state, "running")
 })
@@ -194,7 +194,7 @@ test("heartbeat_persists_periodically_not_every_tick", () => {
 
   let r = tickAt(s, c, 1001 * S); assert.strictEqual(r.effects.length, 0); s = r.timer
   r = tickAt(s, c, 1029 * S); assert.strictEqual(r.effects.length, 0); s = r.timer
-  r = tickAt(s, c, 1030 * S); assert.ok(r.effects.length > 0); s = r.timer // 30s desde o último registro
+  r = tickAt(s, c, 1030 * S); assert.ok(r.effects.length > 0); s = r.timer // 30s since the last recording
   r = tickAt(s, c, 1031 * S); assert.strictEqual(r.effects.length, 0)
 })
 
@@ -210,7 +210,7 @@ test("absurd_end_resets_phase_paused", () => {
   const c = cfg()
   let s = M.initialTimer(c)
   s = toggleAt(s, c, 1000 * S)
-  // state.json corrompido: fim daqui a 200h
+  // corrupted state.json: ends 200h from now
   s = Object.assign({}, s, { clock: { state: "running", endsAt: (1000 + 200 * 3600) * S } })
 
   const r = tickAt(s, c, 1001 * S)
@@ -232,7 +232,7 @@ test("reset_returns_to_initial", () => {
 test("resync_snaps_paused_full_phase", () => {
   const oldCfg = cfg()
   const newCfg = cfg({ work: 40 })
-  const s = M.initialTimer(oldCfg) // foco pausado, 25:00
+  const s = M.initialTimer(oldCfg) // paused focus, 25:00
   const r = M.step(s, { kind: "config", next: newCfg }, oldCfg, 0)
   assert.ok(r.effects.length > 0)
   assert.strictEqual(r.timer.clock.remainingMs, 40 * 60 * S)
@@ -243,13 +243,13 @@ test("resync_skips_running_or_midphase", () => {
   const newCfg = cfg({ work: 40 })
 
   let running = M.initialTimer(oldCfg)
-  running = toggleAt(running, oldCfg, 0) // rodando -> não mexe
+  running = toggleAt(running, oldCfg, 0) // running -> unchanged
   let r = M.step(running, { kind: "config", next: newCfg }, oldCfg, 0)
   assert.strictEqual(r.effects.length, 0)
   assert.strictEqual(r.timer, running)
 
   let mid = M.initialTimer(oldCfg)
-  mid = Object.assign({}, mid, { clock: { state: "paused", remainingMs: 600 * S } }) // pausado no meio -> não mexe
+  mid = Object.assign({}, mid, { clock: { state: "paused", remainingMs: 600 * S } }) // paused midway -> unchanged
   r = M.step(mid, { kind: "config", next: newCfg }, oldCfg, 0)
   assert.strictEqual(r.effects.length, 0)
   assert.strictEqual(r.timer.clock.remainingMs, 600 * S)
@@ -262,7 +262,7 @@ test("work_then_short_break", () => {
 })
 
 test("zero_completed_work_never_long_break", () => {
-  // Foco pulado sem nenhum concluído: 0 é múltiplo de 4, mas não merece pausa longa.
+  // Skipped focus with none completed: 0 is a multiple of 4, but does not earn a long break.
   assert.strictEqual(M.nextPhase("work", 0, 4), "short_break")
 })
 
@@ -315,20 +315,20 @@ test("set_rejects_bad_input", () => {
 
 // render.rs's RING_GLYPHS existed because the Waybar module only renders
 // text; the ring is now QtQuick.Shapes. What survives from "glyph at the
-// extremes" is the notification glyph, which is by phase (foco vs pausa).
+// extremes" is the notification glyph, which is by phase (focus vs break).
 test("glyph_extremes", () => {
   const c = cfg()
   let s = M.initialTimer(c)
   s = toggleAt(s, c, 0)
 
-  let r = tickAt(s, c, 1500 * S) // foco termina -> pausa começa
+  let r = tickAt(s, c, 1500 * S) // focus ends -> break starts
   let notify = r.effects.find(e => e.kind === "notify")
   assert.strictEqual(notify.glyph, M.GLYPH_BREAK)
 
-  s = M.step(r.timer, { kind: "start" }, c, 1500 * S).timer // retoma a pausa manualmente
-  // simula um heartbeat recente logo antes do fim, para não cruzar GAP_MS
+  s = M.step(r.timer, { kind: "start" }, c, 1500 * S).timer // resumes the break manually
+  // simulates a recent heartbeat just before the end to avoid crossing GAP_MS
   s = Object.assign({}, s, { seenAt: (1500 + 5 * 60) * S - S })
-  r = tickAt(s, c, (1500 + 5 * 60) * S) // pausa termina -> foco começa
+  r = tickAt(s, c, (1500 + 5 * 60) * S) // break ends -> focus starts
   notify = r.effects.find(e => e.kind === "notify")
   assert.strictEqual(notify.glyph, M.GLYPH_WORK)
 })
@@ -390,7 +390,7 @@ test("skip does not send a notification", () => {
 test("start is idempotent when already running", () => {
   const c = cfg()
   let s = M.initialTimer(c)
-  s = toggleAt(s, c, 0) // rodando
+  s = toggleAt(s, c, 0) // running
   const r = M.step(s, { kind: "start" }, c, 500 * S)
   assert.strictEqual(r.timer, s)
   assert.strictEqual(r.effects.length, 0)
@@ -409,7 +409,7 @@ test("restore reads the legacy Rust state.json (epoch in seconds)", () => {
 test("restore with a gap over 120s rewinds and pauses", () => {
   const c = cfg()
   const old = JSON.stringify({ phase: "work", running: true, end: 2500, remaining: 0, completed_work: 0, last_tick: 1000 })
-  const r = M.restore(old, c, (1000 + 300) * S) // 300s de buraco > GAP_SECS
+  const r = M.restore(old, c, (1000 + 300) * S) // 300s gap > GAP_SECS
   assert.strictEqual(r.timer.clock.state, "paused")
   assert.strictEqual(r.timer.clock.remainingMs, 25 * 60 * S)
   assert.strictEqual(r.effects.some(e => e.kind === "notify"), false)

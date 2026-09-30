@@ -5,28 +5,28 @@ import Quickshell.Io
 import qs.Commons
 import "Model.js" as Model
 
-// O único dono de estado do plugin: a shell monta UM Service por processo,
-// e cada BarWidget (um por monitor) o encontra por `bar.shell.serviceFor`.
-// Tudo que o redutor (Model.step) decide que deve acontecer no mundo real
-// —persistir, notificar, tocar som— passa por `runEffect`, que é o único
-// código com efeito colateral do repositório: é isso que torna as
-// notificações afirmáveis sob node, em test/model.test.js, sem Qt.
+// The plugin's sole state owner: the shell mounts ONE Service per process,
+// and each BarWidget (one per monitor) finds it through `bar.shell.serviceFor`.
+// Everything the reducer (Model.step) decides must happen in the real world
+// — persist, notify, play sound — goes through `runEffect`, the repository's
+// only code with side effects. This makes notifications testable under node
+// in test/model.test.js, without Qt.
 Item {
   id: root
 
-  // ---- Injetados pelo host (duck-typed: nome tem de bater exatamente).
+  // ---- Injected by the host (duck-typed: names must match exactly).
   property string omarchyPath: ""
   property var shell: null
   property var manifest: null
 
-  // O id vive só no manifest.json; este fallback existe apenas para o caso
-  // (testes, injeção incompleta) em que `manifest` ainda não chegou.
-  readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "larissa04alves.omadoro"
+  // The id lives only in manifest.json; this fallback is only for cases
+  // (tests, incomplete injection) where `manifest` has not arrived yet.
+  readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "tarik.pomodoro"
 
-  // ---- Configuração: lida de shell.json através da fachada do host, nunca
-  //      escrita daqui a não ser por `setConfig`. Duas entradas do mesmo id
-  //      (dois monitores) mesclam por chave — a primeira vence, a mesma
-  //      regra que o chime usa para `settingsMerged`.
+  // ---- Configuration: read from shell.json through the host facade, written
+  //      from here only through `setConfig`. Two entries with the same id
+  //      (two monitors) merge by key: first wins, the same rule chime uses
+  //      for `settingsMerged`.
   function mergedSettings(barConfig) {
     var out = {}
     var layout = barConfig && Util.isPlainObject(barConfig.layout) ? barConfig.layout : null
@@ -45,12 +45,12 @@ Item {
     return out
   }
 
-  // O host devolve barConfig uma escrita atrasado (ver
-  // docs/armadilhas-de-desenvolvimento.md): a entrada que acabamos de gravar
-  // vale até ele devolver exatamente ela.
+  // The host returns barConfig one write behind (see
+  // docs/development-pitfalls.md): the entry we just wrote remains
+  // authoritative until the host returns that exact entry.
   readonly property var hostEntry: mergedSettings(root.shell ? root.shell.barConfig : null)
   property var pendingEntry: null
-  // Entrega atrasada de uma escrita nossa não é mudança externa.
+  // Delayed delivery of our own write is not an external change.
   property var writtenHistory: []
   readonly property var config: Model.normalizeConfig(root.pendingEntry || root.hostEntry)
 
@@ -60,9 +60,9 @@ Item {
     if (arrived === JSON.stringify(root.pendingEntry) || root.writtenHistory.indexOf(arrived) === -1)
       root.pendingEntry = null
   }
-  // Snapshot da config anterior, só para o resync de `stepConfig` (que
-  // precisa comparar a duração VELHA contra a nova). Não é uma binding viva:
-  // é reatribuída à mão logo abaixo, uma vez por mudança real de `config`.
+  // Snapshot of the previous config, only for `stepConfig` resync, which
+  // compares the OLD duration with the new one. Not a live binding:
+  // reassigned manually below, once per actual `config` change.
   property var previousConfig: Model.normalizeConfig({})
 
   onConfigChanged: {
@@ -76,20 +76,20 @@ Item {
     root.adopt(Model.step(root.timer, { kind: "config", next: root.config }, prev, root.nowMs))
   }
 
-  // ---- A superfície pública: timer é opaco para a UI, view é o que ela lê.
+  // ---- Public surface: timer is opaque to the UI; view is what it reads.
   property var timer: Model.initialTimer(root.config)
-  // Bool plano, escrito em adopt: `timer` troca de referência a cada tick e
-  // uma binding de precision sobre ele (ou sobre view) fecha um laço que a
-  // shell loga como "Binding loop detected" (medido ao vivo nas duas formas).
+  // Plain bool written in adopt: `timer` changes reference on every tick,
+  // and binding precision to it (or view) closes a loop the shell logs as
+  // "Binding loop detected" (measured live in both forms).
   property bool running: false
   property bool ready: false
   readonly property var view: Model.view(root.timer, root.config, root.nowMs)
 
   property double nowMs: Date.now()
 
-  // Segundos enquanto conta, minutos quando parado: segue o relógio de
-  // parede, então se autocorrige depois de um suspend — um Timer contando
-  // intervalos não faria isso.
+  // Seconds while counting, minutes while stopped: follows wall-clock time
+  // and corrects itself after suspend. A Timer counting intervals would not
+  // do this.
   SystemClock {
     id: clock
     precision: root.running ? SystemClock.Seconds : SystemClock.Minutes
@@ -99,33 +99,33 @@ Item {
     }
   }
 
-  // ---- O redutor. UMA porta para toda transição do sistema; `dispatch` é
-  //      tipado por string em vez de cinco métodos idênticos (a red flag de
-  //      pass-through), e a fronteira valida contra Model.EVENTS.
+  // ---- The reducer. ONE gate for every system transition; `dispatch` uses
+  //      a string rather than five identical methods (a pass-through red
+  //      flag), and the boundary validates against Model.EVENTS.
   function dispatch(kind) {
     if (Model.EVENTS.indexOf(kind) === -1) {
-      console.warn("omadoro: unknown event '" + kind + "'")
+      console.warn("pomodoro: unknown event '" + kind + "'")
       return false
     }
-    // Parado, o SystemClock só bate por minuto: um toggle/skip com o nowMs
-    // desse último tick encurtaria a fase nova em até 59 s.
+    // When stopped, SystemClock ticks only once per minute: toggle/skip using
+    // that last tick's nowMs would shorten the new phase by up to 59 s.
     root.nowMs = Date.now()
     root.adopt(Model.step(root.timer, { kind: kind }, root.config, root.nowMs))
     return true
   }
 
-  // One-liners sobre dispatch(), só para o QML ler nomes em vez de strings.
+  // One-liners over dispatch(), so QML reads names instead of strings.
   function toggle() { return root.dispatch("toggle") }
   function start() { return root.dispatch("start") }
   function skip() { return root.dispatch("skip") }
   function restart() { return root.dispatch("restart") }
   function reset() { return root.dispatch("reset") }
 
-  // A ÚNICA porta de escrita de configuração no repositório inteiro.
+  // The ONLY configuration write gate in the entire repository.
   function setConfig(key, value) {
     if (!root.shell || typeof root.shell.updateEntryInline !== "function") return false
-    // updateEntryInline substitui a entrada inteira: partir da entrada viva
-    // preserva chaves que não são nossas (o host descarta o `id` sozinho).
+    // updateEntryInline replaces the whole entry: starting from the live
+    // entry preserves keys that are not ours (the host discards `id` itself).
     var base = root.pendingEntry || root.hostEntry
     var entry = {}
     for (var k in base) entry[k] = base[k]
@@ -141,8 +141,8 @@ Item {
     root.timer = stepResult.timer
     root.running = stepResult.timer.clock.state === "running"
     var effects = stepResult.effects
-    // A ordem importa: o redutor sempre devolve persist antes de notify/sound
-    // (se a shell morrer entre os dois, perde-se um aviso, nunca duplica-se).
+    // Order matters: the reducer always returns persist before notify/sound.
+    // If the shell dies between them, a notification is lost, never duplicated.
     for (var i = 0; i < effects.length; i++) root.runEffect(effects[i])
   }
 
@@ -150,8 +150,8 @@ Item {
     if (effect.kind === "persist") {
       root.saveWanted = true
       if (!root.dirReady) return
-      // Troca de fase e reparo gravam já: o debounce existe para o heartbeat
-      // e para rajadas de clique, não para a janela entre gravar e avisar.
+      // Phase changes and repairs save immediately: debounce is for heartbeats
+      // and bursts of clicks, not the interval between saving and notifying.
       if (effect.reason === "phase" || effect.reason === "repair") { saveTimer.stop(); saveTimer.triggered() }
       else saveTimer.restart()
     } else if (effect.kind === "notify") {
@@ -161,17 +161,17 @@ Item {
     }
   }
 
-  // ---------------------------------------------------------- notificação
+  // ---------------------------------------------------------- notification
   //
-  // `--exec` consome o resto do argv como o clique-ação: com autoStartNext
-  // desligado (o padrão), hoje o usuário termina o foco e fica olhando uma
-  // pausa parada — a notificação vira o botão "começar". `start` é
-  // idempotente, então clicar duas vezes não reinicia nada.
+  // `--exec` consumes the rest of argv as the click action. With
+  // autoStartNext off (the default), the user finishes focus and faces a
+  // stopped break; the notification becomes the "start" button. `start` is
+  // idempotent, so clicking twice does not restart anything.
   function sendNotification(effect) {
     var exec = (root.omarchyPath || "/usr/share/omarchy") + "/bin/omarchy-shell"
     Quickshell.execDetached([
       "omarchy-notification-send",
-      "--app-name", "Omadoro",
+      "--app-name", "Pomodoro",
       "-g", effect.glyph,
       "-u", effect.urgency,
       "-t", "8000",
@@ -181,11 +181,11 @@ Item {
     ])
   }
 
-  // ---------------------------------------------------------------- som
+  // ---------------------------------------------------------------- sound
   //
-  // Cadeia portátil (chime): pw-play -> paplay -> mpv -> ffplay. exitCode 3
-  // (ou três falhas rápidas seguidas) trava `soundBroken` em vez de girar em
-  // disco sem áudio.
+  // Portable chain (chime): pw-play -> paplay -> mpv -> ffplay. exitCode 3
+  // (or three consecutive quick failures) latches `soundBroken` instead of
+  // spinning on disk without audio.
   readonly property string soundScript: 'f="$1"; [[ -f "$f" && -r "$f" ]] || { sleep 2; exit 3; }; '
     + 'if command -v pw-play >/dev/null 2>&1; then exec pw-play -- "$f"; fi; '
     + 'if command -v paplay >/dev/null 2>&1; then exec paplay -- "$f"; fi; '
@@ -212,12 +212,12 @@ Item {
       root.soundFailures = root.soundFailures + 1
       if (exitCode === 3 || root.soundFailures >= 3) {
         root.soundBroken = true
-        console.warn("omadoro: could not play sound (missing pw-play/paplay/mpv/ffplay, or file unreadable); silencing")
+        console.warn("pomodoro: could not play sound (missing pw-play/paplay/mpv/ffplay, or file unreadable); silencing")
       }
     }
   }
 
-  // ---------------------------------------------------------- persistência
+  // ---------------------------------------------------------- persistence
   readonly property string stateHome: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state"))
   readonly property string stateDir: root.stateHome + "/" + root.pluginId
   readonly property string statePath: root.stateDir + "/state.json"
@@ -225,8 +225,8 @@ Item {
   property bool dirReady: false
   property bool saveWanted: false
 
-  // FileView não cria diretório: saves ficam represados em `saveWanted` até
-  // este Process sair (mesmo padrão do chime).
+  // FileView does not create directories: saves queue in `saveWanted` until
+  // this Process exits (same pattern as chime).
   Process {
     id: mkdirProc
     command: ["mkdir", "-p", root.stateDir]
@@ -242,9 +242,8 @@ Item {
     watchChanges: false
     atomicWrites: true
     printErrors: false
-    // Restaurar é literalmente um tick com um buraco grande: a mesma regra
-    // que trata o suspend trata o restart da shell — um caminho de código,
-    // dois cenários.
+    // Restoring is literally a tick with a large gap: the same rule handles
+    // suspend and shell restart. One code path, two scenarios.
     onLoaded: {
       root.ready = true
       root.adopt(Model.restore(text(), root.config, Date.now()))
@@ -254,7 +253,7 @@ Item {
       root.adopt(Model.restore("", root.config, Date.now()))
     }
     onSaveFailed: function(error) {
-      console.warn("omadoro: could not write " + root.statePath + ": " + String(error))
+      console.warn("pomodoro: could not write " + root.statePath + ": " + String(error))
     }
   }
 
@@ -272,18 +271,18 @@ Item {
 
   // -------------------------------------------------------------------- IPC
   //
-  // UM handler, aqui, no serviço único. O painel leva `manageIpc: false`:
-  // ele é por monitor, e registrar o mesmo alvo duas vezes (dois monitores)
-  // seria o bug que o chime evita da mesma forma.
+  // ONE handler here in the singleton service. The panel has
+  // `manageIpc: false`: it exists per monitor, and registering the same target
+  // twice (two monitors) would cause the same bug chime avoids this way.
   IpcHandler {
-    target: "omadoro"
+    target: "pomodoro"
 
     function open(): void { if (root.shell) root.shell.summon(root.pluginId, "{}") }
     function close(): void { if (root.shell) root.shell.hide(root.pluginId) }
     function toggle(): void { if (root.shell) root.shell.toggle(root.pluginId, "{}") }
 
-    // `pause` só pausa e `start` só inicia: um bind chamado "pause" que
-    // começasse a contar seria uma armadilha. `toggleRunning` alterna.
+    // `pause` only pauses and `start` only starts: a binding named "pause"
+    // that starts counting would be a trap. `toggleRunning` toggles.
     function pause(): void { if (root.timer.clock.state === "running") root.dispatch("toggle") }
     function toggleRunning(): void { root.dispatch("toggle") }
     function start(): void { root.dispatch("start") }
@@ -291,7 +290,7 @@ Item {
     function restart(): void { root.dispatch("restart") }
     function reset(): void { root.dispatch("reset") }
 
-    // Prova que o plugin está vivo sem precisar ler state.json.
+    // Proves the plugin is alive without reading state.json.
     function health(): string {
       return JSON.stringify({
         phase: root.timer.phase,

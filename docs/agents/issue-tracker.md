@@ -1,34 +1,34 @@
 # Issue tracker: GitHub
 
-Issues e specs deste repo vivem nas GitHub Issues de
-`larissa04alves/omadoro`. Toda operação usa a CLI `gh`, dentro do
-clone, que infere o repo pelo `git remote`.
+Issues and specs for this repository live in GitHub Issues at
+`larissa04alves/omadoro`. Every operation uses the `gh` CLI inside the clone,
+which infers the repository from `git remote`.
 
-## Convenções
+## Conventions
 
-- **Criar issue**: `gh issue create --title "..." --body "..."`. Corpo de
-  várias linhas vai por heredoc ou `--body-file`.
-- **Ler issue**: `gh issue view <n> --comments`.
-- **Listar**: `gh issue list --state open --json number,title,body,labels`.
-- **Comentar**: `gh issue comment <n> --body "..."`.
-- **Rótulos**: `gh issue edit <n> --add-label "..."` e `--remove-label "..."`.
-- **Fechar**: `gh issue close <n> --comment "..."`.
+- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a
+  heredoc or `--body-file` for multiline bodies.
+- **Read an issue**: `gh issue view <n> --comments`.
+- **List**: `gh issue list --state open --json number,title,body,labels`.
+- **Comment**: `gh issue comment <n> --body "..."`.
+- **Labels**: `gh issue edit <n> --add-label "..."` and `--remove-label "..."`.
+- **Close**: `gh issue close <n> --comment "..."`.
 
-## Pull requests como superfície de pedidos
+## Pull requests as a request channel
 
-**PRs como pedidos: não.** Mude para `sim` se PRs externos passarem a valer
-como pedido de feature; o `/triage` lê esta flag.
+**PRs as requests: no.** Change to `yes` if external PRs become feature
+requests; `/triage` reads this flag.
 
-## Quando uma skill diz "publicar no issue tracker"
+## When a skill says "publish to the issue tracker"
 
-Crie uma GitHub issue.
+Create a GitHub issue.
 
-## Quando uma skill diz "buscar o ticket"
+## When a skill says "fetch the ticket"
 
-Rode `gh issue view <n> --comments`.
+Run `gh issue view <n> --comments`.
 
-## Conta
+## Account
 
-O repo é da larissa. Ações que aparecem em nome do dono (submissão ao
-marketplace, releases) saem com a conta dela ativa no `gh`:
+The repository belongs to larissa. Actions attributed to the owner
+(marketplace submissions, releases) use her active `gh` account:
 `gh auth switch --user larissa04alves`.

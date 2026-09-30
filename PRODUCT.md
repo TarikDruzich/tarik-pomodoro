@@ -1,47 +1,49 @@
 # PRODUCT.md
 
-## O que é
+## What it is
 
-Omadoro é o pomodoro do Omarchy (Hyprland). Um widget na barra mostra o
-anel de progresso e a contagem regressiva. O clique abre um popup com duas
-abas: **Pomodoro** (anel, pausar, pular, reiniciar) e **Config** (durações,
-auto-início). O plugin roda dentro da omarchy-shell, sem binário próprio. O
-estado guarda o instante em que a fase termina, não um contador.
+Omadoro is Omarchy's pomodoro (Hyprland). A bar widget shows the progress
+ring and countdown. Clicking opens a popup with two tabs: **Pomodoro**
+(ring, pause, skip, restart) and **Config** (durations, auto-start). The
+plugin runs inside omarchy-shell, with no binary of its own. The state
+stores the instant when the phase ends, rather than a counter.
 
-## Quem usa
+## Who uses it
 
-Uma pessoa: o dono da máquina, dev em Linux/Hyprland, o dia todo, em desktop com
-tema escuro. O popup aparece por segundos (ajustar/conferir o timer) e some.
+One person: the machine's owner, a Linux/Hyprland developer, all day, on a
+desktop with a dark theme. The popup appears for seconds (to adjust/check
+the timer) and disappears.
 
-## Registro
+## Register
 
-`product`: a UI serve a tarefa (controlar o timer) e deve desaparecer nela.
-Nada de decoração. Microinterações só para transmitir estado (rodando ou
-pausado, foco ou pausa, hover e press), 150 a 250 ms, sem blur nem sombra
-pesada. O widget vive dentro do processo da shell, então custo de composição
-importa.
+`product`: the UI serves the task (controlling the timer) and should fade
+into it. No decoration. Microinteractions only communicate state (running
+or paused, focus or break, hover and press), 150 to 250 ms, with no blur or
+heavy shadow. The widget lives inside the shell process, so compositing
+cost matters.
 
-## Identidade visual
+## Visual identity
 
-- Sem paleta própria. As cores vêm do tema do Omarchy, por `Color.accent` e
-  `Color.foreground`. Trocar de tema troca a cor do timer junto.
-- Uma cor em três intensidades: `Color.accent` cheio no foco, `Color.accent` a
-  55 % na pausa, `Color.foreground` a 55 % quando o timer está pausado.
-- Anel de progresso desenhado com `QtQuick.Shapes`. No popup a espessura é
-  14 px. Na barra o mesmo componente assume o tamanho do slot de ícone.
-- Fonte e escala vêm da shell (`bar.fontFamily`, `Style.space`). Nada de
-  tamanho fixo em pixel fora do anel.
+- No palette of its own. Colors come from the Omarchy theme through
+  `Color.accent` and `Color.foreground`. Changing the theme changes the
+  timer's color too.
+- One color at three intensities: full `Color.accent` during focus,
+  `Color.accent` at 55% during a break, `Color.foreground` at 55% when paused.
+- Progress ring drawn with `QtQuick.Shapes`. Its thickness is 14 px in the
+  popup. In the bar, the same component takes the icon slot's size.
+- Font and scale come from the shell (`bar.fontFamily`, `Style.space`). No
+  fixed pixel sizes outside the ring.
 
-## Restrições técnicas de UI
+## Technical UI constraints
 
-- QML dentro da omarchy-shell, via Quickshell. A view usa os componentes de
-  `Ui/` da shell (`Panel`, `KeyboardPanel`, `PanelKeyCatcher`, `PanelSlider`,
-  `WidgetButton`, `ButtonGroup`), não controles próprios.
-- O popup é um `KeyboardPanel` e não um `PopupCard`, porque a aba Config tem
-  sliders e um interruptor que precisam de foco de teclado, e porque `Esc` só
-  chega pelo `PanelKeyCatcher`, que precisa de foco.
-- Não existe backdrop próprio. Clique fora e `Esc` vêm da shell.
-- O popup congela o próprio relógio enquanto está fechado, para não reavaliar
-  bindings atrás de uma janela que ninguém vê.
-- O anel e o MM:SS da barra continuam atualizando com o popup fechado: a
-  notificação de fim de fase é o produto e tem de disparar sem a janela aberta.
+- QML inside omarchy-shell, through Quickshell. The view uses the shell's
+  `Ui/` components (`Panel`, `KeyboardPanel`, `PanelKeyCatcher`, `PanelSlider`,
+  `WidgetButton`, `ButtonGroup`), rather than custom controls.
+- The popup is a `KeyboardPanel` rather than a `PopupCard`, because the
+  Config tab has sliders and a switch that need keyboard focus, and because
+  `Esc` only arrives through `PanelKeyCatcher`, which needs focus.
+- No custom backdrop. Outside clicks and `Esc` come from the shell.
+- The popup freezes its own clock while closed to avoid reevaluating
+  bindings behind a window nobody sees.
+- The bar's ring and MM:SS keep updating with the popup closed: the phase-end
+  notification is the product and must fire without the window open.

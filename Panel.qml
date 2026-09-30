@@ -4,52 +4,54 @@ import qs.Commons
 import qs.Ui
 import "Model.js" as Model
 
-// O popup: duas abas, Pomodoro e Config. A raiz TEM de ser qs.Ui.Panel (zero
-// propriedades `required`) porque BarWidget.qml carrega isto por um Loader,
-// que não consegue preencher propriedades required — o KeyboardPanel real
-// (que TEM required anchorItem/bar) fica aninhado por dentro, com as
-// propriedades preenchidas à mão por `injectPanel()` no host.
+// The popup: two tabs, Pomodoro and Config. The root MUST be qs.Ui.Panel
+// with zero `required` properties because BarWidget.qml loads it through a
+// Loader, which cannot fill required properties. The actual KeyboardPanel
+// (with required anchorItem/bar) is nested inside, with properties filled
+// manually by `injectPanel()` in the host.
 //
-// `manageIpc: false`: o alvo IPC "pomodoro" vive no Service (singleton),
-// nunca aqui — este painel existe uma vez por monitor, e registrar o mesmo
-// alvo duas vezes seria o bug que o chime evita da mesma forma.
+// `manageIpc: false`: IPC target "pomodoro" lives in the singleton Service.
+// This panel exists once per monitor; registering the same target twice
+// would cause the same bug that chime avoids this way.
 Panel {
   id: root
   manageIpc: false
 
-  // moduleName é herdado de qs.Ui.Panel (não redeclarado — qmllint recusa
-  // sombrear uma propriedade da base): amarrado ao widget que nos carregou,
-  // que por sua vez recebe o id do host. O id do plugin só existe, como
-  // texto, no manifest.json.
+  // moduleName is inherited from qs.Ui.Panel, not redeclared: qmllint rejects
+  // shadowing a base property. Bound to the widget that loaded us, which gets
+  // its id from the host. The plugin id exists as text only in manifest.json.
   moduleName: hostWidget ? hostWidget.moduleName : ""
 
-  property var anchorItem: null // PLAIN, não `required` — injetado à mão
+  property var anchorItem: null // PLAIN, not `required` — injected manually
   property var hostWidget: null
   property var service: null
 
-  // O host identifica um painel pelo widget montado no slot, não por este
-  // objeto aninhado: requestPopout e switchPanelFrom usam o widget.
+  // The host identifies a panel by the widget mounted in the slot, rather
+  // than this nested object: requestPopout and switchPanelFrom use the widget.
   readonly property var barIdentity: hostWidget || root
 
   readonly property color fg: bar ? bar.foreground : Color.foreground
   readonly property color dim: Util.alpha(fg, 0.6)
+  readonly property color accent: Color.accent
+  readonly property color cardColor: Util.alpha(fg, 0.05)
+  readonly property color cardBorder: Util.alpha(fg, 0.08)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
 
   readonly property var cfg: service ? service.config : Model.normalizeConfig({})
 
-  // Congelado com o popup fechado: senão cada linha reavalia a cada segundo
-  // atrás de uma janela que ninguém vê.
-  // service.view já é recalculada a cada segundo para a barra; congelar uma
-  // cópia aqui só criaria uma segunda verdade (e um anel que re-anima ao abrir).
+  // Frozen while the popup is closed: otherwise every row reevaluates each
+  // second behind a window nobody sees.
+  // service.view is already recalculated every second for the bar; freezing
+  // a copy here would create a second source of truth and a ring that animates again on opening.
   readonly property var vm: service ? service.view : Model.view(Model.initialTimer(root.cfg), root.cfg, Date.now())
 
-  property string tab: "pomodoro" // não existe TabBar; ButtonGroup + visible
+  property string tab: "pomodoro" // no TabBar; ButtonGroup + visible
 
-  readonly property real sliderHeight: Style.space(36) // área de clique, não visual
+  readonly property real sliderHeight: Style.space(36) // click area, not visual size
 
-  // Ui/Panel.switchPanel passa `root` (este objeto aninhado) ao host, que só
-  // reconhece o widget montado no slot: sem este override, Tab dentro do
-  // popup é um no-op silencioso.
+  // Ui/Panel.switchPanel passes `root` (this nested object) to the host,
+  // which only recognizes the widget mounted in the slot. Without this
+  // override, Tab inside the popup silently does nothing.
   function switchPanel(direction) {
     if (root.bar && typeof root.bar.switchPanelFrom === "function")
       return root.bar.switchPanelFrom(root.barIdentity, direction)
@@ -67,13 +69,13 @@ Panel {
     owner: root.barIdentity
     open: root.opened
     focusTarget: keys
-    contentWidth: panel.fittedContentWidth(Style.space(300))
+    contentWidth: panel.fittedContentWidth(Style.space(320))
     contentHeight: panel.fittedContentHeight(column.implicitHeight)
 
-    // KeyboardPanel e não PopupCard: Escape só chega pelo PanelKeyCatcher, que
-    // precisa de foco, e PopupCard não tem foco nenhum. O catcher consome as
-    // setas e Enter mesmo sem handler, então eles ganham um uso: setas trocam
-    // a aba, Enter/Espaço pausa ou retoma.
+    // KeyboardPanel rather than PopupCard: Escape only arrives through
+    // PanelKeyCatcher, which needs focus; PopupCard has none. The catcher
+    // consumes arrows and Enter even without handlers, so they get a use:
+    // arrows switch tabs, Enter/Space pauses or resumes.
     PanelKeyCatcher {
       id: keys
       anchors.fill: parent
@@ -86,7 +88,7 @@ Panel {
       Column {
         id: column
         anchors.fill: parent
-        spacing: Style.space(12)
+        spacing: Style.space(14)
 
         ButtonGroup {
           width: parent.width
@@ -97,8 +99,6 @@ Panel {
           onChanged: function(value) { root.tab = value === "Pomodoro" ? "pomodoro" : "config" }
         }
 
-        PanelSeparator { foreground: root.fg }
-
         // -------------------------------------------------------- Pomodoro
 
         Column {
@@ -106,48 +106,62 @@ Panel {
           width: parent.width
           spacing: Style.space(16)
 
-          Ring {
-            id: ring
-            anchors.horizontalCenter: parent.horizontalCenter
-            size: 172
-            thickness: 14
-            progress: root.vm.progress
-            phase: root.vm.phase
-            paused: !root.vm.running
+          // Card behind the ring
+          Rectangle {
+            width: parent.width
+            height: ring.height + Style.space(32)
+            radius: Style.space(16)
+            color: root.cardColor
+            border.width: 1
+            border.color: root.cardBorder
 
-            Column {
+            Ring {
+              id: ring
               anchors.centerIn: parent
-              spacing: Style.space(2)
+              size: 184
+              thickness: 10
+              progress: root.vm.progress
+              phase: root.vm.phase
+              paused: !root.vm.running
 
-              Text {
-                textFormat: Text.PlainText
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: root.vm.mmss
-                color: root.fg
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.displayLarge
-                font.bold: true
-              }
+              Column {
+                anchors.centerIn: parent
+                spacing: Style.space(4)
 
-              Text {
-                textFormat: Text.PlainText
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: root.vm.phaseLabel
-                color: root.dim
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.body
+                Text {
+                  textFormat: Text.PlainText
+                  anchors.horizontalCenter: parent.horizontalCenter
+                  text: root.vm.mmss
+                  color: root.fg
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.displayLarge
+                  font.bold: true
+                  font.letterSpacing: 1
+                }
+
+                // Phase name in the same color as the ring, small caps look
+                Text {
+                  textFormat: Text.PlainText
+                  anchors.horizontalCenter: parent.horizontalCenter
+                  text: String(root.vm.phaseLabel).toUpperCase()
+                  color: root.vm.running ? ring.fill : root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body - 2
+                  font.bold: true
+                  font.letterSpacing: 2
+                }
               }
             }
           }
 
           Row {
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: Style.space(12)
+            spacing: Style.space(14)
 
-            // Três ícones da mesma família (Nerd Font, via iconText do Button)
-            // no mesmo corpo: emoji no lugar de ícone sai da fonte da shell e
-            // vem colorido de outra fonte.
-            // O Button dimensiona pelo glifo; o de reiniciar dá a medida.
+            // Three icons from the same family (Nerd Font, through Button.iconText)
+            // at the same size: an emoji instead of an icon leaves the shell font
+            // and appears in color from another font.
+            // Button sizes itself by the glyph; the restart button sets the size.
             Button {
               id: restartButton
               iconText: "󰜉"
@@ -181,63 +195,112 @@ Panel {
               onClicked: if (root.service) root.service.skip()
             }
           }
+
+          // Keyboard hint
+          Text {
+            textFormat: Text.PlainText
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            text: "Space: pause/resume  ·  ←/→: switch tab"
+            color: Util.alpha(root.fg, 0.4)
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.body - 2
+          }
         }
 
         // ---------------------------------------------------------- Config
 
-        Column {
+        Rectangle {
           visible: root.tab === "config"
           width: parent.width
-          spacing: Style.space(8)
-
-          ConfigSlider { label: "Focus time"; configKey: "work"; minimum: 5; maximum: 60 }
-          ConfigSlider { label: "Short break"; configKey: "short"; minimum: 1; maximum: 20 }
-          ConfigSlider { label: "Long break"; configKey: "long"; minimum: 10; maximum: 45 }
+          height: configColumn.implicitHeight + Style.space(32)
+          radius: Style.space(16)
+          color: root.cardColor
+          border.width: 1
+          border.color: root.cardBorder
 
           Column {
-            width: parent.width
-            spacing: Style.space(4)
+            id: configColumn
+            x: Style.space(16)
+            y: Style.space(16)
+            width: parent.width - Style.space(32)
+            spacing: Style.space(12)
 
-            Text {
-              textFormat: Text.PlainText
+            ConfigSlider { label: "Focus time"; configKey: "work"; minimum: 5; maximum: 60 }
+            ConfigSlider { label: "Short break"; configKey: "short"; minimum: 1; maximum: 20 }
+            ConfigSlider { label: "Long break"; configKey: "long"; minimum: 10; maximum: 45 }
+
+            Column {
               width: parent.width
-              text: "Cycles until long break: " + Math.round(longEverySlider.dragging ? longEverySlider.liveValue : longEverySlider.value)
-              color: root.fg
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.body
+              spacing: Style.space(4)
+
+              SettingHeader {
+                label: "Cycles until long break"
+                valueText: String(Math.round(longEverySlider.dragging ? longEverySlider.liveValue : longEverySlider.value))
+              }
+
+              PanelSlider {
+                id: longEverySlider
+                width: parent.width
+                height: root.sliderHeight
+                bar: root.bar
+                minimum: 2
+                maximum: 8
+                step: 1
+                integer: false
+                tickCount: 7
+                value: root.cfg.longEvery
+                onReleased: function(v) { root.commitSetting("longEvery", Math.round(v)) }
+              }
             }
 
-            PanelSlider {
-              id: longEverySlider
+            Toggle {
               width: parent.width
-              height: root.sliderHeight
-              bar: root.bar
-              minimum: 2
-              maximum: 8
-              step: 1
-              integer: false
-              tickCount: 7
-              value: root.cfg.longEvery
-              onReleased: function(v) { root.commitSetting("longEvery", Math.round(v)) }
+              label: "Auto-start next phase"
+              checked: root.cfg.autoStartNext
+              foreground: root.fg
+              fontFamily: root.fontFamily
+              onClicked: root.commitSetting("autoStartNext", !checked)
             }
-          }
-
-          Toggle {
-            width: parent.width
-            label: "Auto-start next phase"
-            checked: root.cfg.autoStartNext
-            foreground: root.fg
-            fontFamily: root.fontFamily
-            onClicked: root.commitSetting("autoStartNext", !checked)
           }
         }
       }
     }
   }
 
-  // Inline components só podem ser filhos diretos da raiz do documento QML
-  // (não podem ficar aninhados dentro de Column/PanelKeyCatcher), por isso
-  // moram aqui, irmãos do KeyboardPanel, mesmo referenciados lá dentro.
+  // Inline components can only be direct children of the QML document root
+  // (they cannot be nested inside Column/PanelKeyCatcher), so they live here
+  // as siblings of KeyboardPanel, even though referenced inside it.
+
+  // Label on the left, current value in the accent color on the right.
+  component SettingHeader: Item {
+    id: header
+    required property string label
+    required property string valueText
+    width: parent.width
+    height: labelText.implicitHeight
+
+    Text {
+      id: labelText
+      textFormat: Text.PlainText
+      anchors.left: parent.left
+      text: header.label
+      color: root.fg
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.body
+    }
+
+    Text {
+      textFormat: Text.PlainText
+      anchors.right: parent.right
+      text: header.valueText
+      color: root.accent
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.body
+      font.bold: true
+    }
+  }
+
   component ConfigSlider: Column {
     id: field
     required property string label
@@ -249,13 +312,9 @@ Panel {
 
     readonly property real shownValue: slider.dragging ? slider.liveValue : slider.value
 
-    Text {
-      textFormat: Text.PlainText
-      width: parent.width
-      text: field.label + ": " + Math.round(field.shownValue) + " min"
-      color: root.fg
-      font.family: root.fontFamily
-      font.pixelSize: Style.font.body
+    SettingHeader {
+      label: field.label
+      valueText: Math.round(field.shownValue) + " min"
     }
 
     PanelSlider {
@@ -266,13 +325,16 @@ Panel {
       minimum: field.minimum
       maximum: field.maximum
       step: 1
-      // Contínuo: com integer o knob salta em degraus em vez de seguir o mouse.
+      // Continuous: integer makes the knob jump in steps instead of following the mouse.
       integer: false
       value: root.cfg[field.configKey]
-      // `released` grava uma vez, no mouse-up: uma escrita de shell.json por
-      // pixel arrastado seria desperdício, e com `allowMultiple: false` uma
-      // tempestade de rebuild de widget.
+      // `released` saves once, on mouse-up: writing shell.json for every dragged
+      // pixel would be wasteful and, with `allowMultiple: false`, cause a storm
+      // of widget rebuilds.
       onReleased: function(v) { root.commitSetting(field.configKey, Math.round(v)) }
     }
   }
 }
+
+
+
