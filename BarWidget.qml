@@ -18,14 +18,19 @@ BarWidget {
   // If the service is unavailable, keep an empty ring and explain why in the tooltip.
   readonly property var view: service ? service.view : ({
     mmss: "--:--", progress: 0, phase: "work", running: false,
-    tooltip: "Omadoro: service did not load (see the omarchy-shell log)"
+    tooltip: "Pomodoro: service did not load (see the omarchy-shell log)"
   })
 
   // Style.bar.iconCanvas is the same 16px that the ring prototype (ring.qml)
   // proved crisp with CurveRenderer: the bar's natural icon slot.
   readonly property real ringSize: Style.bar.iconCanvas
 
-  implicitWidth: vertical ? barSize : ringSize
+  // Show the remaining time next to the ring (horizontal bar only).
+  // Set to false to go back to the ring alone.
+  readonly property bool showTime: true
+  readonly property bool timeVisible: showTime && !vertical
+
+  implicitWidth: vertical ? barSize : content.implicitWidth
   implicitHeight: vertical ? ringSize : barSize
 
   // ---- Bar.findPanelWidget contract: tested on the bar-widget ROOT, not
@@ -86,14 +91,35 @@ BarWidget {
       }
     }
 
-    Ring {
+    Row {
+      id: content
       anchors.centerIn: parent
-      size: root.ringSize
-      thickness: Math.max(2, root.ringSize * 0.16)
-      progress: root.view.progress
-      phase: root.view.phase
-      paused: !root.view.running
-      baseColor: button.foreground
+      spacing: Style.space(6)
+
+      Ring {
+        anchors.verticalCenter: parent.verticalCenter
+        size: root.ringSize
+        thickness: Math.max(2, root.ringSize * 0.16)
+        progress: root.view.progress
+        phase: root.view.phase
+        paused: !root.view.running
+        baseColor: button.foreground
+      }
+
+      Text {
+        visible: root.timeVisible
+        anchors.verticalCenter: parent.verticalCenter
+        textFormat: Text.PlainText
+        text: root.view.mmss
+        color: button.foreground
+        opacity: root.view.running ? 1.0 : 0.55
+        font.family: root.bar ? root.bar.fontFamily : Style.font.family
+        font.pixelSize: Style.font.body
+        font.bold: true
+        font.letterSpacing: 0.5
+
+        Behavior on opacity { NumberAnimation { duration: 200 } }
+      }
     }
   }
 }

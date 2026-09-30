@@ -21,7 +21,7 @@ Item {
 
   // The id lives only in manifest.json; this fallback is only for cases
   // (tests, incomplete injection) where `manifest` has not arrived yet.
-  readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "larissa04alves.omadoro"
+  readonly property string pluginId: manifest && manifest.id ? String(manifest.id) : "tarik.pomodoro"
 
   // ---- Configuration: read from shell.json through the host facade, written
   //      from here only through `setConfig`. Two entries with the same id
@@ -104,7 +104,7 @@ Item {
   //      flag), and the boundary validates against Model.EVENTS.
   function dispatch(kind) {
     if (Model.EVENTS.indexOf(kind) === -1) {
-      console.warn("omadoro: unknown event '" + kind + "'")
+      console.warn("pomodoro: unknown event '" + kind + "'")
       return false
     }
     // When stopped, SystemClock ticks only once per minute: toggle/skip using
@@ -171,7 +171,7 @@ Item {
     var exec = (root.omarchyPath || "/usr/share/omarchy") + "/bin/omarchy-shell"
     Quickshell.execDetached([
       "omarchy-notification-send",
-      "--app-name", "Omadoro",
+      "--app-name", "Pomodoro",
       "-g", effect.glyph,
       "-u", effect.urgency,
       "-t", "8000",
@@ -212,7 +212,7 @@ Item {
       root.soundFailures = root.soundFailures + 1
       if (exitCode === 3 || root.soundFailures >= 3) {
         root.soundBroken = true
-        console.warn("omadoro: could not play sound (missing pw-play/paplay/mpv/ffplay, or file unreadable); silencing")
+        console.warn("pomodoro: could not play sound (missing pw-play/paplay/mpv/ffplay, or file unreadable); silencing")
       }
     }
   }
@@ -253,7 +253,7 @@ Item {
       root.adopt(Model.restore("", root.config, Date.now()))
     }
     onSaveFailed: function(error) {
-      console.warn("omadoro: could not write " + root.statePath + ": " + String(error))
+      console.warn("pomodoro: could not write " + root.statePath + ": " + String(error))
     }
   }
 
@@ -275,7 +275,7 @@ Item {
   // `manageIpc: false`: it exists per monitor, and registering the same target
   // twice (two monitors) would cause the same bug chime avoids this way.
   IpcHandler {
-    target: "omadoro"
+    target: "pomodoro"
 
     function open(): void { if (root.shell) root.shell.summon(root.pluginId, "{}") }
     function close(): void { if (root.shell) root.shell.hide(root.pluginId) }
