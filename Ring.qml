@@ -2,14 +2,14 @@ import QtQuick
 import QtQuick.Shapes
 import qs.Commons
 
-// Anel de progresso: um componente, dois tamanhos (16px na barra, 172px no
-// popup). É o que substitui os 8 glifos RING_GLYPHS do render.rs do Rust —
-// aqueles existiam porque a Waybar só sabe renderizar texto, uma restrição
-// do host antigo, não do produto.
+// Progress ring: one component, two sizes (16px in the bar, 172px in the
+// popup). Replaces the 8 RING_GLYPHS glyphs in Rust's render.rs, which
+// existed because Waybar can only render text: a restriction of the old
+// host, rather than the product.
 Item {
   id: root
 
-  property real progress: 1.0 // 1 cheio -> 0 vazio, como o disco do Rust
+  property real progress: 1.0 // 1 full -> 0 empty, like the Rust disk
   property real thickness: 14
   property real size: 172
   property string phase: "work"
@@ -20,20 +20,20 @@ Item {
   width: size
   height: size
 
-  // Uma cor de tema, três intensidades: sem paleta própria. O foco é o
-  // accent cheio, a pausa é o mesmo accent a 55%, e pausado desbota para o
-  // foreground — o que continua legível em qualquer tema do Omarchy.
-  // Quem desenha na barra passa a cor da barra (que muda com a barra
-  // transparente); o popup fica com os tokens do tema.
+  // One theme color, three intensities: no palette of our own. Focus uses
+  // full accent, breaks use the same accent at 55%, and paused fades to
+  // foreground, which stays readable in any Omarchy theme.
+  // The bar renderer passes the bar color (which changes with a transparent
+  // bar); the popup uses the theme tokens.
   property color baseColor: Color.foreground
   property color accentColor: Color.accent
   readonly property color fill: root.paused
     ? Util.alpha(root.baseColor, 0.55)
     : (root.phase === "work" ? root.accentColor : Util.alpha(root.accentColor, 0.55))
 
-  // O tween anima a contagem segundo a segundo; ele é desligado num salto
-  // grande (troca de fase, reinício, restauração) para o anel não dar meia
-  // volta na tela.
+  // The tween animates the countdown second by second; disabled on large
+  // jumps (phase change, restart, restore) so the ring does not spin halfway
+  // around on screen.
   property real animatedProgress: root.progress
   Behavior on animatedProgress {
     enabled: Math.abs(root.progress - root.animatedProgress) <= 0.5
@@ -43,9 +43,9 @@ Item {
   Shape {
     id: shape
     anchors.fill: parent
-    // CurveRenderer é o que fica nítido tanto a 16px quanto a 172px
-    // (protótipo em scratchpad/proto/ring.qml + DECISION.md); o renderer
-    // padrão do Shape serrilha visivelmente o arco fino da barra.
+    // CurveRenderer stays crisp at both 16px and 172px (prototype in
+    // scratchpad/proto/ring.qml + DECISION.md); Shape's default renderer
+    // visibly aliases the bar's thin arc.
     preferredRendererType: Shape.CurveRenderer
     layer.enabled: true
     layer.samples: 8

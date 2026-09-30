@@ -4,31 +4,30 @@ import qs.Commons
 import qs.Ui
 import "Model.js" as Model
 
-// O popup: duas abas, Pomodoro e Config. A raiz TEM de ser qs.Ui.Panel (zero
-// propriedades `required`) porque BarWidget.qml carrega isto por um Loader,
-// que não consegue preencher propriedades required — o KeyboardPanel real
-// (que TEM required anchorItem/bar) fica aninhado por dentro, com as
-// propriedades preenchidas à mão por `injectPanel()` no host.
+// The popup: two tabs, Pomodoro and Config. The root MUST be qs.Ui.Panel
+// with zero `required` properties because BarWidget.qml loads it through a
+// Loader, which cannot fill required properties. The actual KeyboardPanel
+// (with required anchorItem/bar) is nested inside, with properties filled
+// manually by `injectPanel()` in the host.
 //
-// `manageIpc: false`: o alvo IPC "pomodoro" vive no Service (singleton),
-// nunca aqui — este painel existe uma vez por monitor, e registrar o mesmo
-// alvo duas vezes seria o bug que o chime evita da mesma forma.
+// `manageIpc: false`: IPC target "pomodoro" lives in the singleton Service.
+// This panel exists once per monitor; registering the same target twice
+// would cause the same bug that chime avoids this way.
 Panel {
   id: root
   manageIpc: false
 
-  // moduleName é herdado de qs.Ui.Panel (não redeclarado — qmllint recusa
-  // sombrear uma propriedade da base): amarrado ao widget que nos carregou,
-  // que por sua vez recebe o id do host. O id do plugin só existe, como
-  // texto, no manifest.json.
+  // moduleName is inherited from qs.Ui.Panel, not redeclared: qmllint rejects
+  // shadowing a base property. Bound to the widget that loaded us, which gets
+  // its id from the host. The plugin id exists as text only in manifest.json.
   moduleName: hostWidget ? hostWidget.moduleName : ""
 
-  property var anchorItem: null // PLAIN, não `required` — injetado à mão
+  property var anchorItem: null // PLAIN, not `required` — injected manually
   property var hostWidget: null
   property var service: null
 
-  // O host identifica um painel pelo widget montado no slot, não por este
-  // objeto aninhado: requestPopout e switchPanelFrom usam o widget.
+  // The host identifies a panel by the widget mounted in the slot, rather
+  // than this nested object: requestPopout and switchPanelFrom use the widget.
   readonly property var barIdentity: hostWidget || root
 
   readonly property color fg: bar ? bar.foreground : Color.foreground
@@ -37,19 +36,19 @@ Panel {
 
   readonly property var cfg: service ? service.config : Model.normalizeConfig({})
 
-  // Congelado com o popup fechado: senão cada linha reavalia a cada segundo
-  // atrás de uma janela que ninguém vê.
-  // service.view já é recalculada a cada segundo para a barra; congelar uma
-  // cópia aqui só criaria uma segunda verdade (e um anel que re-anima ao abrir).
+  // Frozen while the popup is closed: otherwise every row reevaluates each
+  // second behind a window nobody sees.
+  // service.view is already recalculated every second for the bar; freezing
+  // a copy here would create a second source of truth and a ring that animates again on opening.
   readonly property var vm: service ? service.view : Model.view(Model.initialTimer(root.cfg), root.cfg, Date.now())
 
-  property string tab: "pomodoro" // não existe TabBar; ButtonGroup + visible
+  property string tab: "pomodoro" // no TabBar; ButtonGroup + visible
 
-  readonly property real sliderHeight: Style.space(36) // área de clique, não visual
+  readonly property real sliderHeight: Style.space(36) // click area, not visual size
 
-  // Ui/Panel.switchPanel passa `root` (este objeto aninhado) ao host, que só
-  // reconhece o widget montado no slot: sem este override, Tab dentro do
-  // popup é um no-op silencioso.
+  // Ui/Panel.switchPanel passes `root` (this nested object) to the host,
+  // which only recognizes the widget mounted in the slot. Without this
+  // override, Tab inside the popup silently does nothing.
   function switchPanel(direction) {
     if (root.bar && typeof root.bar.switchPanelFrom === "function")
       return root.bar.switchPanelFrom(root.barIdentity, direction)
@@ -70,10 +69,10 @@ Panel {
     contentWidth: panel.fittedContentWidth(Style.space(300))
     contentHeight: panel.fittedContentHeight(column.implicitHeight)
 
-    // KeyboardPanel e não PopupCard: Escape só chega pelo PanelKeyCatcher, que
-    // precisa de foco, e PopupCard não tem foco nenhum. O catcher consome as
-    // setas e Enter mesmo sem handler, então eles ganham um uso: setas trocam
-    // a aba, Enter/Espaço pausa ou retoma.
+    // KeyboardPanel rather than PopupCard: Escape only arrives through
+    // PanelKeyCatcher, which needs focus; PopupCard has none. The catcher
+    // consumes arrows and Enter even without handlers, so they get a use:
+    // arrows switch tabs, Enter/Space pauses or resumes.
     PanelKeyCatcher {
       id: keys
       anchors.fill: parent
@@ -144,10 +143,10 @@ Panel {
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: Style.space(12)
 
-            // Três ícones da mesma família (Nerd Font, via iconText do Button)
-            // no mesmo corpo: emoji no lugar de ícone sai da fonte da shell e
-            // vem colorido de outra fonte.
-            // O Button dimensiona pelo glifo; o de reiniciar dá a medida.
+            // Three icons from the same family (Nerd Font, through Button.iconText)
+            // at the same size: an emoji instead of an icon leaves the shell font
+            // and appears in color from another font.
+            // Button sizes itself by the glyph; the restart button sets the size.
             Button {
               id: restartButton
               iconText: "󰜉"
@@ -235,9 +234,9 @@ Panel {
     }
   }
 
-  // Inline components só podem ser filhos diretos da raiz do documento QML
-  // (não podem ficar aninhados dentro de Column/PanelKeyCatcher), por isso
-  // moram aqui, irmãos do KeyboardPanel, mesmo referenciados lá dentro.
+  // Inline components can only be direct children of the QML document root
+  // (they cannot be nested inside Column/PanelKeyCatcher), so they live here
+  // as siblings of KeyboardPanel, even though referenced inside it.
   component ConfigSlider: Column {
     id: field
     required property string label
@@ -266,12 +265,12 @@ Panel {
       minimum: field.minimum
       maximum: field.maximum
       step: 1
-      // Contínuo: com integer o knob salta em degraus em vez de seguir o mouse.
+      // Continuous: integer makes the knob jump in steps instead of following the mouse.
       integer: false
       value: root.cfg[field.configKey]
-      // `released` grava uma vez, no mouse-up: uma escrita de shell.json por
-      // pixel arrastado seria desperdício, e com `allowMultiple: false` uma
-      // tempestade de rebuild de widget.
+      // `released` saves once, on mouse-up: writing shell.json for every dragged
+      // pixel would be wasteful and, with `allowMultiple: false`, cause a storm
+      // of widget rebuilds.
       onReleased: function(v) { root.commitSetting(field.configKey, Math.round(v)) }
     }
   }

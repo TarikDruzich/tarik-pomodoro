@@ -1,95 +1,96 @@
 # Omadoro
 
-Omadoro é o pomodoro do Omarchy, um timer que vive dentro da omarchy-shell.
-Este glossário fixa os nomes que o código, os testes e os documentos usam
-para falar do timer.
+Omadoro is Omarchy's pomodoro, a timer that lives inside omarchy-shell.
+This glossary fixes the names used by the code, tests and documentation
+when discussing the timer.
 
 ## Language
 
-**Fase**:
-Um trecho contínuo do ciclo com duração própria. Há três: Foco, Pausa e Pausa
-longa.
-_Avoid_: etapa, período, sessão
+**Phase**:
+A continuous part of the cycle with its own duration. There are three: Focus,
+Break and Long break.
+_Avoid_: stage, period, session
 
-**Foco**:
-A fase de trabalho. Só um Foco que termina sozinho conta para a cadência da
-Pausa longa.
-_Avoid_: work, trabalho, pomodoro (como fase)
+**Focus**:
+The work phase. Only a Focus that finishes naturally counts toward the
+Long break cadence.
+_Avoid_: work, working, pomodoro (as a phase)
 
-**Pausa**:
-A fase curta de descanso que vem depois de um Foco.
-_Avoid_: break, intervalo, descanso
+**Break**:
+The short rest phase that follows a Focus.
+_Avoid_: interval, rest
 
-**Pausa longa**:
-A pausa maior que substitui a Pausa a cada N Focos concluídos.
-_Avoid_: long break, pausa grande
+**Long break**:
+The longer break that replaces the Break after every N completed Focus phases.
+_Avoid_: big break
 
-**Ciclo**:
-A contagem de Focos concluídos desde o último zerar. Decide quando vem a
-Pausa longa.
-_Avoid_: rodada, série, sprint
+**Cycle**:
+The count of completed Focus phases since the last reset. Determines when
+the Long break occurs.
+_Avoid_: round, series, sprint
 
-**Foco concluído**:
-Um Foco que chegou ao fim pelo relógio. Entra no Ciclo.
-_Avoid_: foco feito, foco terminado
+**Completed focus**:
+A Focus that reached its end on the clock. Counts toward the Cycle.
+_Avoid_: done focus, finished focus
 
-**Foco pulado**:
-Um Foco encerrado pelo botão de pular. Não entra no Ciclo.
-_Avoid_: foco cancelado, foco abortado
+**Skipped focus**:
+A Focus ended with the skip button. Does not count toward the Cycle.
+_Avoid_: canceled focus, aborted focus
 
-**Relógio**:
-O estado de tempo do timer. Ou está rodando, e guarda o instante de fim, ou
-está pausado, e guarda quanto falta. Nunca os dois.
-_Avoid_: contador, cronômetro, countdown
+**Clock**:
+The timer's time state. It is either running and stores the end instant, or
+paused and stores the remaining time. Never both.
+_Avoid_: counter, stopwatch, countdown
 
-**Instante de fim**:
-O momento absoluto em que a Fase termina, quando o Relógio está rodando.
-_Avoid_: end, deadline, tempo final
+**End instant**:
+The absolute moment when the Phase ends while the Clock is running.
+_Avoid_: end, deadline, final time
 
-**Restante**:
-Quanto falta para a Fase terminar. Derivado do Instante de fim quando rodando,
-guardado quando pausado.
-_Avoid_: remaining, tempo que sobra
+**Remaining time**:
+How much time is left before the Phase ends. Derived from the End instant
+while running, stored while paused.
+_Avoid_: time left over
 
-**Buraco**:
-Um intervalo sem ticks maior que o limite de suspensão. Indica que a máquina
-dormiu ou a shell caiu. Rebobina a Fase cheia e pausada, sem aviso.
-_Avoid_: gap, lacuna, salto
+**Gap**:
+An interval without ticks longer than the suspend threshold. Indicates that
+the machine slept or the shell crashed. Rewinds the Phase to its full
+length, paused, without a notification.
+_Avoid_: hole, jump
 
-**Batida**:
-A gravação periódica do último instante visto, só para detectar Buraco depois
-de um reinício.
-_Avoid_: heartbeat, keepalive
+**Heartbeat**:
+The periodic recording of the last observed instant, solely to detect a Gap
+after a restart.
+_Avoid_: beat, keepalive
 
-**Resincronização**:
-Ajuste do Restante quando uma duração muda e a Fase está pausada ainda no
-tempo cheio. Fases rodando ou no meio não mudam.
-_Avoid_: resync, atualização de duração
+**Resynchronization**:
+Adjustment of the Remaining time when a duration changes and the Phase is
+paused at its full length. Running or partially elapsed phases do not change.
+_Avoid_: resync, duration update
 
-**Evento**:
-Um pedido de mudança ao redutor: tick, alternar, iniciar, pular, reiniciar,
-zerar ou nova configuração.
-_Avoid_: ação, comando, mensagem
+**Event**:
+A change request to the reducer: tick, toggle, start, skip, restart, reset
+or new configuration.
+_Avoid_: action, command, message
 
-**Efeito**:
-Uma consequência que o redutor pede e o Service executa: gravar, notificar ou
-tocar som.
+**Effect**:
+A consequence requested by the reducer and executed by the Service: persist,
+notify or play sound.
 _Avoid_: side effect, callback
 
 **Chip**:
-O item do plugin na barra: anel mais MM:SS.
-_Avoid_: widget da barra, ícone, módulo
+The plugin's item in the bar: ring plus MM:SS.
+_Avoid_: bar widget, icon, module
 
 **Popup**:
-A janela ancorada no Chip com as abas Pomodoro e Config.
-_Avoid_: painel, janela, modal
+The window anchored to the Chip with the Pomodoro and Config tabs.
+_Avoid_: panel, window, modal
 
-**Entrada inline**:
-O objeto do plugin dentro do layout da barra em `shell.json`, onde a
-configuração do usuário fica.
-_Avoid_: settings, config do widget
+**Inline entry**:
+The plugin object inside the bar layout in `shell.json`, where the user's
+configuration lives.
+_Avoid_: settings, widget config
 
-**Estado de execução**:
-Fase, Relógio, Ciclo e Batida, gravados em arquivo próprio. Nunca vai para a
-Entrada inline.
-_Avoid_: state, runtime state
+**Runtime state**:
+Phase, Clock, Cycle and Heartbeat, saved in a dedicated file. Never goes
+into the Inline entry.
+_Avoid_: state, execution state

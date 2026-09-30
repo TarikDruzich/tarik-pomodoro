@@ -1,38 +1,38 @@
-# Docs de domínio
+# Domain docs
 
-Como as skills de engenharia consomem a documentação de domínio deste repo.
+How engineering skills consume this repository's domain documentation.
 
-## Antes de explorar, leia
+## Before exploring, read
 
-- `CONTEXT.md` na raiz: o glossário. Único contexto.
-- `docs/adr/`: as decisões que tocam a área em que você vai mexer.
+- Root `CONTEXT.md`: the glossary. The sole context.
+- `docs/adr/`: the decisions affecting the area you will change.
 
-Se um arquivo não existir, siga em silêncio. O `/domain-modeling` cria os
-dois quando um termo ou uma decisão de fato se resolve.
+If a file does not exist, continue silently. `/domain-modeling` creates
+both when a term or decision is actually resolved.
 
-## Estrutura
+## Structure
 
 ```
 /
 ├── CONTEXT.md
 ├── docs/
 │   ├── adr/
-│   │   ├── 0001-plugin-qml-puro-sem-binario.md
+│   │   ├── 0001-pure-qml-plugin-without-binary.md
 │   │   └── ...
 │   ├── agents/
-│   └── publicar-no-marketplace.md
+│   └── publishing-to-marketplace.md
 └── *.qml, Model.js
 ```
 
-## Use o vocabulário do glossário
+## Use the glossary's vocabulary
 
-Quando o texto nomear um conceito do domínio (título de issue, nome de teste,
-hipótese), use o termo como o `CONTEXT.md` define. Não derive para os
-sinônimos listados em `_Avoid_`. Conceito sem entrada no glossário é sinal:
-ou é linguagem inventada, ou é lacuna para o `/domain-modeling`.
+When text names a domain concept (issue title, test name, hypothesis), use
+the term as defined in `CONTEXT.md`. Do not drift toward the synonyms listed
+under `_Avoid_`. A concept without a glossary entry is a signal: either it
+is invented language, or it is a gap for `/domain-modeling`.
 
-## Sinalize conflito com ADR
+## Flag conflicts with ADRs
 
-Se a saída contradiz um ADR, diga explicitamente em vez de passar por cima:
+If the output contradicts an ADR, say so explicitly rather than overriding it:
 
-> _Contradiz o ADR-0003 (IPC único no Service), mas vale reabrir porque..._
+> _Contradicts ADR-0003 (single IPC handler in Service), but is worth reopening because..._

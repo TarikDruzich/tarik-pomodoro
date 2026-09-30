@@ -64,8 +64,8 @@ var MAX_LABEL = 40
 
 var VALID_PHASES = ["work", "short_break", "long_break"]
 
-// Next phase, by fase, as a table rather than a switch — model-the-domain: the
-// long-break cadence lives entirely inside the "work" row.
+// Next phase, by phase, as a table rather than a switch — model-the-domain:
+// the long-break cadence lives entirely inside the "work" row.
 var TRANSITIONS = {
   work: function(completedWork, longEvery) {
     // The `completedWork > 0` guard exists because 0 is a multiple of any n:
@@ -329,8 +329,8 @@ function stepTick(timer, config, now) {
           glyph: glyphFor(result.transition.started),
           urgency: "normal"
         },
-        // O caminho vai como "$1" para o bash, nunca re-tokenizado: sanitizar aqui
-        // só corromperia caminhos válidos (espaços duplos, "<", ">").
+        // The path goes to bash as "$1", never retokenized: sanitizing here
+        // would only corrupt valid paths (double spaces, "<", ">").
         { kind: "sound", file: config.sound || DEFAULT_SOUND }
       ]
     }
@@ -431,8 +431,8 @@ function view(timer, config, now) {
   var remaining = remainingMs(timer, now)
   var cycleTotal = config.longEvery
   var cycleDone = cycleTotal > 0 ? timer.completedWork % cycleTotal : 0
-  // Sem o MM:SS: o host só lê o tooltip ao entrar com o mouse, então um tempo
-  // vivo aqui congelaria ao lado de um rótulo que continua contando.
+  // No MM:SS: the host reads the tooltip only on mouse entry, so live time
+  // here would freeze beside a label that keeps counting.
   var tooltip = phaseLabel(timer.phase) + " · " + (running ? "running" : "paused") +
     " · " + cycleDone + "/" + cycleTotal + " focus sessions until long break"
   return {
